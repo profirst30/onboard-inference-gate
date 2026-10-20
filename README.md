@@ -14,7 +14,7 @@ This repository is a small, CPU-only version of that path, built in a day.
 
 1. **Partner model** (`src/train.py`): a 4-block CNN trained on [EuroSAT](https://github.com/phelber/EuroSAT) RGB (Sentinel-2, 10 land-cover classes, 64×64), exported to ONNX (opset 17).
 2. **INT8** (`src/quantize.py`): static post-training quantization with ONNX Runtime, QDQ format, per-channel weights, calibrated on 512 training images. MinMax, Entropy and Percentile calibration are available; on this model none of them closed the accuracy gap.
-3. **Sensitivity** (`src/sensitivity.py`): quantize every Conv/Gemm but one, and measure accuracy each time. It shows which layer costs the accuracy; keeping only that layer in FP32 gives the `mixed` model.
+3. **Sensitivity** (`src/sensitivity.py`): quantize every Conv/Gemm but one, and measure accuracy each time. It shows which layer costs the accuracy; keeping only that layer in FP32 gives the `mixed` model. `--reduce-range` (7-bit weights) gives the `_rr` model, which fixes the root cause (see below).
 4. **Bench** (`src/bench.py`): for each model, size, SHA-256, accuracy on 2,700 held-out images, and which execution provider runs each node of the optimized graph (from ORT profiling). For each thread count, p50/p95/p99 latency over 300 single-image runs and the memory added by the session, each in a fresh process.
 5. **Gate** (`src/gate.py check`): budgets per target in `budgets.yaml` (p99 latency, size, session memory, accuracy drop against FP32, max opset). A model is accepted only if it passes every check.
 6. **Manifest** (`src/gate.py package` / `verify`): SHA-256, target, opset and input shape. `verify` exits non-zero on any mismatch, before the model is loaded.
@@ -26,27 +26,32 @@ Measured on AMD Ryzen 7 5825U with Radeon Graphics, Windows-11-10.0.26200-SP0, O
 
 | model | size (KB) | accuracy | threads | p50 (ms) | p99 (ms) | session (MB) |
 |---|---:|---:|---:|---:|---:|---:|
-| eurosat_fp32 | 314.6 | 92.9 % | 1 | 0.319 | 0.443 | 8.0 |
-| eurosat_fp32 | 314.6 | 92.9 % | 4 | 0.131 | 0.178 | 9.0 |
-| eurosat_int8_minmax | 92.4 | 90.9 % | 1 | 0.372 | 0.611 | 7.8 |
-| eurosat_int8_minmax | 92.4 | 90.9 % | 4 | 0.152 | 0.182 | 9.2 |
-| eurosat_int8_minmax_mixed | 92.3 | 92.9 % | 1 | 0.441 | 0.668 | 8.0 |
-| eurosat_int8_minmax_mixed | 92.3 | 92.9 % | 4 | 0.353 | 0.515 | 9.1 |
+| eurosat_fp32 | 314.6 | 92.9 % | 1 | 0.307 | 0.493 | 8.3 |
+| eurosat_fp32 | 314.6 | 92.9 % | 4 | 0.118 | 0.207 | 8.8 |
+| eurosat_int8_minmax | 92.4 | 90.9 % | 1 | 0.370 | 0.633 | 7.7 |
+| eurosat_int8_minmax | 92.4 | 90.9 % | 4 | 0.149 | 0.224 | 8.7 |
+| eurosat_int8_minmax_mixed | 92.3 | 92.9 % | 1 | 0.458 | 0.528 | 8.7 |
+| eurosat_int8_minmax_mixed | 92.3 | 92.9 % | 4 | 0.350 | 0.639 | 9.5 |
+| eurosat_int8_minmax_rr | 92.4 | 92.9 % | 1 | 0.354 | 0.474 | 8.0 |
+| eurosat_int8_minmax_rr | 92.4 | 92.9 % | 4 | 0.145 | 0.191 | 8.6 |
 
 | model | cpu-1-thread | cpu-4-threads |
 |---|---|---|
 | eurosat_fp32 | rejected: size 314.61 KB > 128 KB | accepted |
 | eurosat_int8_minmax | rejected: accuracy drop 2.00 pts > 1.0 pts | rejected: accuracy drop 2.00 pts > 1.0 pts |
 | eurosat_int8_minmax_mixed | accepted | accepted |
+| eurosat_int8_minmax_rr | accepted | accepted |
 <!-- /results -->
 
 The table above is written by `python -m src.gate check` from `results/bench.json`; no number is typed by hand. The budgets in `budgets.yaml` are examples chosen to illustrate the check, not real spacecraft budgets.
 
 ## What the numbers say
 
-- Full INT8 cuts the file to under a third of the FP32 size but fails the accuracy budget, whatever the calibration method.
-- The sensitivity run points at a single layer, the first convolution (3 input channels, raw pixels). Keeping it in FP32 brings accuracy back to the FP32 level at almost no size cost.
-- On this x86 CPU, INT8 is **not** faster than FP32 for a model this small: the quantize/dequantize steps and layout changes cost more than the integer arithmetic saves. INT8 here buys size, not speed. On an accelerator with native INT8 (Hailo, TensorRT INT8) the trade-off has to be measured again, which is exactly why the gate runs per target.
+- Full INT8 cuts the file to under a third of the FP32 size, but the default U8S8 model fails the accuracy budget, whatever the calibration method.
+- The sensitivity run points at a single layer, the first convolution. Keeping it in FP32 (`mixed`) brings accuracy back, but that only hides the cause.
+- The cause is the CPU kernel, not the model. The input quantization is lossless (pixels are already k/255) and the first layer's weights have the smallest quantization error in the network. This Zen 3 CPU has AVX2 but no VNNI: U8S8 kernels add pairs of u8×s8 products into 16-bit integers, which can saturate, and the first layer, fed with raw pixels over the full 0–255 range, is where that happens most. Storing weights on 7 bits (`reduce_range`, model `_rr`) keeps those sums in range: full INT8 at FP32 accuracy, accepted on both targets. ONNX Runtime documents this option for exactly this case; on a VNNI CPU or another accelerator it should not be needed.
+- So the same INT8 file loses accuracy or not depending on the hardware that runs it. That is the strongest argument for validating every model on every target.
+- On this CPU, INT8 is still **not** faster than FP32 for a model this small: quantize/dequantize steps and layout changes cost more than integer arithmetic saves. INT8 buys size here, not speed.
 
 ## Limits
 
@@ -65,10 +70,11 @@ python -m src.train          # downloads EuroSAT (~90 MB) on the first run
 python -m src.quantize
 python -m src.sensitivity
 python -m src.quantize --exclude /0/0.0/Conv   # Git Bash on Windows: prefix with MSYS_NO_PATHCONV=1
+python -m src.quantize --reduce-range
 python -m src.bench          # --threads 1 4, --providers CPUExecutionProvider
 python -m src.gate check
-python -m src.gate package models/eurosat_int8_minmax_mixed.onnx --target cpu-1-thread
-python -m src.gate verify  models/eurosat_int8_minmax_mixed.onnx --target cpu-1-thread
+python -m src.gate package models/eurosat_int8_minmax_rr.onnx --target cpu-1-thread
+python -m src.gate verify  models/eurosat_int8_minmax_rr.onnx --target cpu-1-thread
 python -m pytest tests
 ```
 

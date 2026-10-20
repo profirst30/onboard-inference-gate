@@ -16,5 +16,9 @@
   "eurosat_int8_minmax_mixed": {
     "cpu-1-thread": [],
     "cpu-4-threads": []
+  },
+  "eurosat_int8_minmax_rr": {
+    "cpu-1-thread": [],
+    "cpu-4-threads": []
   }
 }

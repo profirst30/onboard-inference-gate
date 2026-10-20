@@ -134,6 +134,47 @@
           "CPUExecutionProvider": 2
         }
       }
+    },
+    "eurosat_int8_minmax_rr": {
+      "size_bytes": 94659,
+      "sha256": "d7ecdcb4d9150c7b24f22919faf86668e83c8a1a3eed4d58ddab480d44231998",
+      "opset": 17,
+      "op_types_graph": {
+        "DequantizeLinear": 22,
+        "QuantizeLinear": 12,
+        "Conv": 4,
+        "MaxPool": 4,
+        "GlobalAveragePool": 1,
+        "Flatten": 1,
+        "Gemm": 1
+      },
+      "accuracy": 0.9285185185185185,
+      "placement": {
+        "DequantizeLinear": {
+          "CPUExecutionProvider": 1
+        },
+        "Flatten": {
+          "CPUExecutionProvider": 1
+        },
+        "NhwcMaxPool": {
+          "CPUExecutionProvider": 4
+        },
+        "QGemm": {
+          "CPUExecutionProvider": 1
+        },
+        "QLinearConv": {
+          "CPUExecutionProvider": 4
+        },
+        "QLinearGlobalAveragePool": {
+          "CPUExecutionProvider": 1
+        },
+        "QuantizeLinear": {
+          "CPUExecutionProvider": 1
+        },
+        "Transpose": {
+          "CPUExecutionProvider": 2
+        }
+      }
     }
   },
   "runs": [
@@ -141,72 +182,96 @@
       "model": "eurosat_fp32",
       "threads": 1,
       "latency_ms": {
-        "p50": 0.31875,
-        "p95": 0.3369,
-        "p99": 0.44323799999999985,
-        "mean": 0.31796633333333335
+        "p50": 0.30665,
+        "p95": 0.34702,
+        "p99": 0.49296799999999946,
+        "mean": 0.31176766666666667
       },
-      "session_mb": 8.04,
+      "session_mb": 8.27,
       "runs": 300
     },
     {
       "model": "eurosat_fp32",
       "threads": 4,
       "latency_ms": {
-        "p50": 0.131,
-        "p95": 0.167305,
-        "p99": 0.17832899999999996,
-        "mean": 0.1362823333333333
+        "p50": 0.11755,
+        "p95": 0.14669500000000002,
+        "p99": 0.20715699999999931,
+        "mean": 0.12239733333333333
       },
-      "session_mb": 8.99,
+      "session_mb": 8.77,
       "runs": 300
     },
     {
       "model": "eurosat_int8_minmax",
       "threads": 1,
       "latency_ms": {
-        "p50": 0.3718,
-        "p95": 0.42996000000000006,
-        "p99": 0.6114059999999999,
-        "mean": 0.37996366666666664
+        "p50": 0.3703,
+        "p95": 0.4418300000000001,
+        "p99": 0.6327919999999855,
+        "mean": 0.4079206666666667
       },
-      "session_mb": 7.75,
+      "session_mb": 7.66,
       "runs": 300
     },
     {
       "model": "eurosat_int8_minmax",
       "threads": 4,
       "latency_ms": {
-        "p50": 0.1522,
-        "p95": 0.16429500000000002,
-        "p99": 0.1822109999999999,
-        "mean": 0.15486200000000003
+        "p50": 0.14895,
+        "p95": 0.19246000000000005,
+        "p99": 0.22357099999999994,
+        "mean": 0.15485166666666667
       },
-      "session_mb": 9.21,
+      "session_mb": 8.66,
       "runs": 300
     },
     {
       "model": "eurosat_int8_minmax_mixed",
       "threads": 1,
       "latency_ms": {
-        "p50": 0.4414,
-        "p95": 0.48107500000000003,
-        "p99": 0.667825999999996,
-        "mean": 0.4478633333333333
+        "p50": 0.45775,
+        "p95": 0.49829500000000004,
+        "p99": 0.528014,
+        "mean": 0.462676
       },
-      "session_mb": 8.02,
+      "session_mb": 8.65,
       "runs": 300
     },
     {
       "model": "eurosat_int8_minmax_mixed",
       "threads": 4,
       "latency_ms": {
-        "p50": 0.3535,
-        "p95": 0.42023000000000005,
-        "p99": 0.5153099999999999,
-        "mean": 0.3644356666666667
+        "p50": 0.34965,
+        "p95": 0.46203500000000003,
+        "p99": 0.6389179999999999,
+        "mean": 0.37036933333333333
       },
-      "session_mb": 9.13,
+      "session_mb": 9.49,
+      "runs": 300
+    },
+    {
+      "model": "eurosat_int8_minmax_rr",
+      "threads": 1,
+      "latency_ms": {
+        "p50": 0.35445,
+        "p95": 0.40463000000000005,
+        "p99": 0.4736659999999998,
+        "mean": 0.36213999999999996
+      },
+      "session_mb": 8.03,
+      "runs": 300
+    },
+    {
+      "model": "eurosat_int8_minmax_rr",
+      "threads": 4,
+      "latency_ms": {
+        "p50": 0.14525,
+        "p95": 0.17514500000000002,
+        "p99": 0.191001,
+        "mean": 0.15313100000000002
+      },
+      "session_mb": 8.63,
       "runs": 300
     }
   ]

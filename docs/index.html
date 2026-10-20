@@ -42,7 +42,7 @@
   <ol class="steps">
     <li><b>1 · Partner model</b>A small CNN trained on EuroSAT (Sentinel-2 RGB, 10 land-cover classes), exported to ONNX.</li>
     <li><b>2 · INT8</b>Static post-training quantization (QDQ, per-channel), calibrated on training images.</li>
-    <li><b>3 · Sensitivity</b>Quantize every layer but one, measure accuracy, and keep the costly layer in FP32.</li>
+    <li><b>3 · Sensitivity</b>Quantize every layer but one, measure accuracy, find the costly layer, then fix the cause.</li>
     <li><b>4 · Bench</b>Latency p50/p95/p99, session memory, size, accuracy, and which execution provider runs each node.</li>
     <li><b>5 · Gate</b>Budgets per target in YAML; a model is accepted only if it passes every check.</li>
     <li><b>6 · Manifest</b>SHA-256, target, opset and input shape; the target refuses any mismatch before loading.</li>
@@ -63,9 +63,11 @@
 
   <h2>What the numbers say</h2>
   <ul>
-    <li>Full INT8 cuts the file to under a third of the FP32 size but fails the accuracy budget, whatever the calibration method.</li>
-    <li>The sensitivity run points at one layer, the first convolution (3 input channels, raw pixels). Keeping it in FP32 restores FP32 accuracy at almost no size cost.</li>
-    <li>On this x86 CPU, INT8 is <strong>not</strong> faster than FP32 for a model this small: quantize/dequantize steps and layout changes cost more than integer arithmetic saves. INT8 buys size here, not speed. On a native INT8 accelerator the trade-off must be measured again, which is why the gate runs per target.</li>
+    <li>Full INT8 cuts the file to under a third of the FP32 size, but the default U8S8 model fails the accuracy budget, whatever the calibration method.</li>
+    <li>The sensitivity run points at one layer, the first convolution. Keeping it in FP32 (<code>mixed</code>) restores accuracy, but only hides the cause.</li>
+    <li><strong>The cause is the CPU kernel, not the model.</strong> Input quantization is lossless (pixels are already k/255) and the first layer's weights have the smallest quantization error in the network. This Zen 3 CPU has AVX2 but no VNNI: U8S8 kernels add pairs of u8×s8 products into 16-bit integers, which can saturate, most of all in the first layer, fed with raw pixels over the full 0–255 range. 7-bit weights (<code>reduce_range</code>, model <code>_rr</code>) keep the sums in range: full INT8 at FP32 accuracy.</li>
+    <li>The same INT8 file loses accuracy or not depending on the hardware that runs it: the strongest argument for validating every model on every target.</li>
+    <li>On this CPU, INT8 is still <strong>not</strong> faster than FP32 for a model this small: quantize/dequantize steps and layout changes cost more than integer arithmetic saves. INT8 buys size here, not speed.</li>
   </ul>
 
   <h2>Node placement (optimized graph)</h2>

@@ -1,6 +1,6 @@
 {
-  "model": "eurosat_int8_minmax_mixed.onnx",
-  "sha256": "35e24ea9b7c596903740dd317ed6faeb83ca70d51fe78850da5c2e93f8f89e19",
+  "model": "eurosat_int8_minmax_rr.onnx",
+  "sha256": "d7ecdcb4d9150c7b24f22919faf86668e83c8a1a3eed4d58ddab480d44231998",
   "target": "cpu-1-thread",
   "opset": 17,
   "input": {

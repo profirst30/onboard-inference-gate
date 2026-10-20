@@ -2,8 +2,8 @@
 and the target refuses a file that does not match its manifest.
 
     python -m src.gate check                                   # budgets, from results/bench.json
-    python -m src.gate package models/eurosat_int8_minmax_mixed.onnx --target cpu-1-thread
-    python -m src.gate verify  models/eurosat_int8_minmax_mixed.onnx --target cpu-1-thread
+    python -m src.gate package models/eurosat_int8_minmax_rr.onnx --target cpu-1-thread
+    python -m src.gate verify  models/eurosat_int8_minmax_rr.onnx --target cpu-1-thread
 """
 import argparse
 import hashlib
