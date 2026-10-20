@@ -1,0 +1,20 @@
+# Example budgets to show the check; these are not real spacecraft budgets.
+# Each target describes what an onboard computer accepts. Exceeding a single limit rejects the model.
+reference: eurosat_fp32        # reference model for the accuracy drop
+input_shape: [batch, 3, 64, 64]
+
+targets:
+  cpu-1-thread:                # constrained computer: one core reserved for AI
+    threads: 1
+    max_latency_p99_ms: 2.0
+    max_model_kb: 128
+    max_session_mb: 16
+    max_accuracy_drop_pts: 1.0
+    max_opset: 17
+  cpu-4-threads:               # roomier computer
+    threads: 4
+    max_latency_p99_ms: 2.0
+    max_model_kb: 512
+    max_session_mb: 32
+    max_accuracy_drop_pts: 1.0
+    max_opset: 17

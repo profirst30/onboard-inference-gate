@@ -1,0 +1,20 @@
+{
+  "eurosat_fp32": {
+    "cpu-1-thread": [
+      "size 314.61 KB > 128 KB"
+    ],
+    "cpu-4-threads": []
+  },
+  "eurosat_int8_minmax": {
+    "cpu-1-thread": [
+      "accuracy drop 2.00 pts > 1.0 pts"
+    ],
+    "cpu-4-threads": [
+      "accuracy drop 2.00 pts > 1.0 pts"
+    ]
+  },
+  "eurosat_int8_minmax_mixed": {
+    "cpu-1-thread": [],
+    "cpu-4-threads": []
+  }
+}

@@ -1,0 +1,213 @@
+{
+  "machine": {
+    "cpu": "AMD Ryzen 7 5825U with Radeon Graphics",
+    "os": "Windows-11-10.0.26200-SP0",
+    "onnxruntime": "1.31.0",
+    "providers": [
+      "CPUExecutionProvider"
+    ],
+    "test_images": 2700
+  },
+  "models": {
+    "eurosat_fp32": {
+      "size_bytes": 322163,
+      "sha256": "3b98a69e9eb624d7fe0ea30ea80796b555680ebbf08d937262649e060c785b98",
+      "opset": 17,
+      "op_types_graph": {
+        "Conv": 4,
+        "Relu": 4,
+        "MaxPool": 4,
+        "GlobalAveragePool": 1,
+        "Flatten": 1,
+        "Gemm": 1
+      },
+      "accuracy": 0.9285185185185185,
+      "placement": {
+        "Conv": {
+          "CPUExecutionProvider": 4
+        },
+        "Flatten": {
+          "CPUExecutionProvider": 1
+        },
+        "Gemm": {
+          "CPUExecutionProvider": 1
+        },
+        "GlobalAveragePool": {
+          "CPUExecutionProvider": 1
+        },
+        "MaxPool": {
+          "CPUExecutionProvider": 4
+        },
+        "ReorderOutput": {
+          "CPUExecutionProvider": 1
+        }
+      }
+    },
+    "eurosat_int8_minmax": {
+      "size_bytes": 94659,
+      "sha256": "2e6a01a3227dfdc8f02556fdd68326547cad86a5523b2efcf0e557f6e18f9671",
+      "opset": 17,
+      "op_types_graph": {
+        "DequantizeLinear": 22,
+        "QuantizeLinear": 12,
+        "Conv": 4,
+        "MaxPool": 4,
+        "GlobalAveragePool": 1,
+        "Flatten": 1,
+        "Gemm": 1
+      },
+      "accuracy": 0.9085185185185185,
+      "placement": {
+        "DequantizeLinear": {
+          "CPUExecutionProvider": 1
+        },
+        "Flatten": {
+          "CPUExecutionProvider": 1
+        },
+        "NhwcMaxPool": {
+          "CPUExecutionProvider": 4
+        },
+        "QGemm": {
+          "CPUExecutionProvider": 1
+        },
+        "QLinearConv": {
+          "CPUExecutionProvider": 4
+        },
+        "QLinearGlobalAveragePool": {
+          "CPUExecutionProvider": 1
+        },
+        "QuantizeLinear": {
+          "CPUExecutionProvider": 1
+        },
+        "Transpose": {
+          "CPUExecutionProvider": 2
+        }
+      }
+    },
+    "eurosat_int8_minmax_mixed": {
+      "size_bytes": 94557,
+      "sha256": "35e24ea9b7c596903740dd317ed6faeb83ca70d51fe78850da5c2e93f8f89e19",
+      "opset": 17,
+      "op_types_graph": {
+        "DequantizeLinear": 18,
+        "Conv": 4,
+        "Relu": 1,
+        "MaxPool": 4,
+        "QuantizeLinear": 10,
+        "GlobalAveragePool": 1,
+        "Flatten": 1,
+        "Gemm": 1
+      },
+      "accuracy": 0.9285185185185185,
+      "placement": {
+        "Conv": {
+          "CPUExecutionProvider": 1
+        },
+        "DequantizeLinear": {
+          "CPUExecutionProvider": 1
+        },
+        "Flatten": {
+          "CPUExecutionProvider": 1
+        },
+        "MaxPool": {
+          "CPUExecutionProvider": 1
+        },
+        "NhwcMaxPool": {
+          "CPUExecutionProvider": 3
+        },
+        "QGemm": {
+          "CPUExecutionProvider": 1
+        },
+        "QLinearConv": {
+          "CPUExecutionProvider": 3
+        },
+        "QLinearGlobalAveragePool": {
+          "CPUExecutionProvider": 1
+        },
+        "QuantizeLinear": {
+          "CPUExecutionProvider": 1
+        },
+        "ReorderOutput": {
+          "CPUExecutionProvider": 1
+        },
+        "Transpose": {
+          "CPUExecutionProvider": 2
+        }
+      }
+    }
+  },
+  "runs": [
+    {
+      "model": "eurosat_fp32",
+      "threads": 1,
+      "latency_ms": {
+        "p50": 0.31875,
+        "p95": 0.3369,
+        "p99": 0.44323799999999985,
+        "mean": 0.31796633333333335
+      },
+      "session_mb": 8.04,
+      "runs": 300
+    },
+    {
+      "model": "eurosat_fp32",
+      "threads": 4,
+      "latency_ms": {
+        "p50": 0.131,
+        "p95": 0.167305,
+        "p99": 0.17832899999999996,
+        "mean": 0.1362823333333333
+      },
+      "session_mb": 8.99,
+      "runs": 300
+    },
+    {
+      "model": "eurosat_int8_minmax",
+      "threads": 1,
+      "latency_ms": {
+        "p50": 0.3718,
+        "p95": 0.42996000000000006,
+        "p99": 0.6114059999999999,
+        "mean": 0.37996366666666664
+      },
+      "session_mb": 7.75,
+      "runs": 300
+    },
+    {
+      "model": "eurosat_int8_minmax",
+      "threads": 4,
+      "latency_ms": {
+        "p50": 0.1522,
+        "p95": 0.16429500000000002,
+        "p99": 0.1822109999999999,
+        "mean": 0.15486200000000003
+      },
+      "session_mb": 9.21,
+      "runs": 300
+    },
+    {
+      "model": "eurosat_int8_minmax_mixed",
+      "threads": 1,
+      "latency_ms": {
+        "p50": 0.4414,
+        "p95": 0.48107500000000003,
+        "p99": 0.667825999999996,
+        "mean": 0.4478633333333333
+      },
+      "session_mb": 8.02,
+      "runs": 300
+    },
+    {
+      "model": "eurosat_int8_minmax_mixed",
+      "threads": 4,
+      "latency_ms": {
+        "p50": 0.3535,
+        "p95": 0.42023000000000005,
+        "p99": 0.5153099999999999,
+        "mean": 0.3644356666666667
+      },
+      "session_mb": 9.13,
+      "runs": 300
+    }
+  ]
+}

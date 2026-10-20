@@ -1,0 +1,6 @@
+.venv/
+data/
+__pycache__/
+.pytest_cache/
+train.log
+EXPLICATIONS.md

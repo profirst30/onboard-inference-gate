@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Onboard inference gate · Nobel Djessou</title>
+<style>
+  :root { --bg: #09172e; --surface: #16273d; --fg: #ffffff; --muted: #b1b1b1; --accent: #dfbe6a; --ok: #61ce70; --err: #e5736f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 960px; margin: 0 auto; padding: 24px 20px 64px; }
+  .notice { background: var(--surface); color: var(--muted); font-size: 14px; padding: 8px 20px; text-align: center; }
+  h1 { font-size: clamp(28px, 5vw, 40px); line-height: 1.15; margin: 32px 0 8px; }
+  h2 { font-size: 22px; margin: 48px 0 12px; color: var(--accent); }
+  p, li { color: #e6e9ee; }
+  .lead { font-size: 18px; color: var(--muted); }
+  a { color: var(--accent); }
+  .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; padding: 0; list-style: none; }
+  .steps li { background: var(--surface); border-radius: 8px; padding: 14px 16px; }
+  .steps b { display: block; color: var(--fg); }
+  .table-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; font-variant-numeric: tabular-nums; }
+  th, td { padding: 8px 10px; border-bottom: 1px solid #2a3b55; text-align: left; white-space: nowrap; }
+  th { color: var(--muted); font-weight: 500; }
+  td.num, th.num { text-align: right; }
+  .ok { color: var(--ok); } .err { color: var(--err); }
+  .muted { color: var(--muted); font-size: 14px; }
+  footer { margin-top: 56px; color: var(--muted); font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="notice">Personal project, not affiliated with or endorsed by Loft Orbital. Public data only (EuroSAT).</div>
+<main>
+  <h1>Onboard inference gate</h1>
+  <p class="lead">A partner model only goes to orbit if it fits the target's budget, and the spacecraft refuses a file that does not match what was compiled for it.</p>
+
+  <h2>The problem, as I understand it</h2>
+  <p>From the <a href="https://jobs.lever.co/loftorbital/7bf12750-6b1f-4bac-a1ab-6709d13c60fa">ML Runtime Engineer</a> posting and the <a href="https://loftorbital.com/on-orbit-ai/">On-Orbit AI</a> page: partners hand over ONNX models, and each one must be turned into an engine for a given onboard accelerator, inside power and thermal budgets. The ground side has to prove a model fits before upload, and the onboard side has to reject an engine built for another target.</p>
+  <p>This is a small, CPU-only version of that path, built in a day to show how I would approach it.</p>
+
+  <h2>What it does</h2>
+  <ol class="steps">
+    <li><b>1 · Partner model</b>A small CNN trained on EuroSAT (Sentinel-2 RGB, 10 land-cover classes), exported to ONNX.</li>
+    <li><b>2 · INT8</b>Static post-training quantization (QDQ, per-channel), calibrated on training images.</li>
+    <li><b>3 · Sensitivity</b>Quantize every layer but one, measure accuracy, and keep the costly layer in FP32.</li>
+    <li><b>4 · Bench</b>Latency p50/p95/p99, session memory, size, accuracy, and which execution provider runs each node.</li>
+    <li><b>5 · Gate</b>Budgets per target in YAML; a model is accepted only if it passes every check.</li>
+    <li><b>6 · Manifest</b>SHA-256, target, opset and input shape; the target refuses any mismatch before loading.</li>
+  </ol>
+
+  <h2>Measurements</h2>
+  <p class="muted" id="machine"></p>
+  <div class="table-wrap"><table id="models"></table></div>
+  <div class="table-wrap"><table id="runs"></table></div>
+
+  <h2>Gate decision</h2>
+  <p class="muted">Example budgets from <code>budgets.yaml</code>, chosen to illustrate the check; they are not real spacecraft budgets.</p>
+  <div class="table-wrap"><table id="gate"></table></div>
+
+  <h2>Which layer costs the accuracy?</h2>
+  <p class="muted">Each row quantizes every Conv/Gemm to INT8 except the one named, then measures accuracy on the held-out images.</p>
+  <div class="table-wrap"><table id="sensitivity"></table></div>
+
+  <h2>What the numbers say</h2>
+  <ul>
+    <li>Full INT8 cuts the file to under a third of the FP32 size but fails the accuracy budget, whatever the calibration method.</li>
+    <li>The sensitivity run points at one layer, the first convolution (3 input channels, raw pixels). Keeping it in FP32 restores FP32 accuracy at almost no size cost.</li>
+    <li>On this x86 CPU, INT8 is <strong>not</strong> faster than FP32 for a model this small: quantize/dequantize steps and layout changes cost more than integer arithmetic saves. INT8 buys size here, not speed. On a native INT8 accelerator the trade-off must be measured again, which is why the gate runs per target.</li>
+  </ul>
+
+  <h2>Node placement (optimized graph)</h2>
+  <p class="muted">Counted from ONNX Runtime profiling. With TensorRT or another provider, the same table shows which operators fall back to the CPU.</p>
+  <div class="table-wrap"><table id="placement"></table></div>
+
+  <h2>Limits</h2>
+  <ul>
+    <li>Measured on a laptop CPU only. I have no Jetson, Hailo or AMD hardware: TensorRT and the other providers are untested. The bench takes <code>--providers</code>, but those numbers do not exist yet.</li>
+    <li>No power or thermal measurement, which is the real constraint onboard.</li>
+    <li>Latency on a laptop is noisy (power management, background load): p99 moves between runs.</li>
+    <li>Session memory is the rise in the process's peak working set; it is an approximation.</li>
+    <li>The model is deliberately small (64×64 images); real partner models are far larger.</li>
+  </ul>
+
+  <footer>
+    Nobel Djessou · embedded AI engineer ·
+    <a href="https://github.com/profirst30/onboard-inference-gate">code on GitHub</a> ·
+    <a href="https://www.linkedin.com/in/nobel-djessou/">LinkedIn</a>
+  </footer>
+</main>
+<script>
+  const el = (tag, text, cls) => { const e = document.createElement(tag); e.textContent = text; if (cls) e.className = cls; return e; };
+  function table(id, head, rows, numFrom = 1) {
+    const t = document.getElementById(id);
+    const tr = t.createTHead().insertRow();
+    head.forEach((h, i) => tr.appendChild(el('th', h, i >= numFrom ? 'num' : '')));
+    const body = t.createTBody();
+    rows.forEach(r => { const row = body.insertRow(); r.forEach((c, i) => row.appendChild(c instanceof Node ? c : el('td', c, i >= numFrom ? 'num' : ''))); });
+  }
+  const f = (x, d = 2) => x.toFixed(d);
+  Promise.all(['results.json', 'gate.json', 'sensitivity.json'].map(u => fetch(u).then(r => r.json()))).then(([b, g, s]) => {
+    const m = b.machine;
+    document.getElementById('machine').textContent = `${m.cpu} · ${m.os} · ONNX Runtime ${m.onnxruntime} · ${m.providers.join(', ')} · accuracy on ${m.test_images} held-out images`;
+    const names = Object.keys(b.models);
+    table('models', ['model', 'size (KB)', 'accuracy', 'opset'],
+      names.map(n => [n, f(b.models[n].size_bytes / 1024, 1), f(100 * b.models[n].accuracy, 1) + ' %', String(b.models[n].opset)]));
+    table('runs', ['model', 'threads', 'p50 (ms)', 'p95 (ms)', 'p99 (ms)', 'session (MB)'],
+      b.runs.map(r => [r.model, String(r.threads), f(r.latency_ms.p50, 3), f(r.latency_ms.p95, 3), f(r.latency_ms.p99, 3), f(r.session_mb, 1)]));
+    const targets = Object.keys(g[names[0]]);
+    table('gate', ['model', ...targets], names.map(n => [n, ...targets.map(t => {
+      const v = g[n][t]; const td = el('td', v.length ? 'rejected: ' + v.join('; ') : 'accepted', v.length ? 'err' : 'ok'); return td; })]), 99);
+    const rows = [];
+    names.forEach(n => Object.entries(b.models[n].placement).forEach(([op, prov]) =>
+      Object.entries(prov).forEach(([p, k]) => rows.push([n, op, p, String(k)]))));
+    table('sensitivity', ['kept in FP32', 'accuracy'], Object.entries(s).map(([k, v]) => [k === 'fp32' ? 'everything (FP32 model)' : k === 'all int8' ? 'nothing (full INT8)' : k, f(100 * v, 2) + ' %']));
+    table('placement', ['model', 'operator', 'provider', 'nodes'], rows, 3);
+  }).catch(() => { document.getElementById('machine').textContent = 'Results could not be loaded (open the page through a web server).'; });
+</script>
+</body>
+</html>

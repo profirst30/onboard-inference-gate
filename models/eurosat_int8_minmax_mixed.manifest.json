@@ -1,0 +1,16 @@
+{
+  "model": "eurosat_int8_minmax_mixed.onnx",
+  "sha256": "35e24ea9b7c596903740dd317ed6faeb83ca70d51fe78850da5c2e93f8f89e19",
+  "target": "cpu-1-thread",
+  "opset": 17,
+  "input": {
+    "name": "image",
+    "shape": [
+      "batch",
+      3,
+      64,
+      64
+    ]
+  },
+  "quantized": true
+}

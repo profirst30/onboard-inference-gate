@@ -1,0 +1,4 @@
+{
+  "epochs": 6,
+  "test_accuracy_pytorch": 0.9285185185185185
+}
