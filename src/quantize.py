@@ -2,8 +2,8 @@
 
     python -m src.quantize [--calib 512] [--methods minmax entropy percentile] [--exclude NODE ...] [--reduce-range]
 
-One INT8 model per calibration method: the method decides how each activation range is chosen,
-which is where most of the accuracy loss comes from.
+One INT8 model per calibration method: the method decides how each activation range is chosen.
+--exclude keeps nodes in FP32; --reduce-range stores weights on 7 bits (see README, "What the numbers say").
 """
 import argparse
 from pathlib import Path
