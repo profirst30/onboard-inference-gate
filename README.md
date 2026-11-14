@@ -81,5 +81,3 @@ python -m pytest tests
 The demo page (`docs/index.html`) reads `docs/results.json`, `docs/gate.json` and `docs/sensitivity.json`: serve the folder (`python -m http.server -d docs`) to view it locally.
 
 Data: EuroSAT (Helber, Bischke, Dengel and Borth, IEEE JSTARS, 2019), MIT licence; contains modified Copernicus Sentinel data.
-
-Nobel Djessou · [LinkedIn](https://www.linkedin.com/in/nobel-djessou/) · [GitHub](https://github.com/profirst30)
